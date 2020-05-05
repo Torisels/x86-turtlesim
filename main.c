@@ -23,6 +23,7 @@ typedef struct {
     uint32_t y_pos;
     uint32_t color;
     uint8_t pen_state;
+    uint8_t direction;
 } TurtleContextStruct;
 
 typedef struct {
@@ -131,8 +132,7 @@ unsigned char *generate_empty_bitmap(unsigned int width, unsigned int height, si
     header.height = height;
 
     memcpy(bitmap, &header, BMP_HEADER_SIZE);
-    for (int i = 54; i<*output_size;++i)
-    {
+    for (int i = 54; i < *output_size; ++i) {
         bitmap[i] = 0xff;
     }
     return bitmap;
@@ -155,26 +155,39 @@ int main() {
 
 
 #ifdef DEBUG
-    printf("Binary bytes read: %d\n", ins_size);
+    printf("======START OF INITIAL DEBUG INFO=====\n");
+    printf("Binary instruction bytes read: %d\n", ins_size);
     printf("Turtle struct size [bytes]: %d\n", sizeof(TurtleContextStruct));
     printf("Header struct size [bytes]: %d\n", sizeof(BmpHeader));
     printf("Width [px]: %d\n", dimensions[0]);
     printf("Height [px]: %d\n", dimensions[1]);
-    printf("BMP byte size: %d\n", bmp_size);
+    printf("BMP buffer size [byte]: %d\n", bmp_size);
+    printf("======END OF INITIAL DEBUG INFO=====\n");
 #endif
     int ins_counter = 0;
     turtle_context.x_pos = 0x00;
     turtle_context.y_pos = 0x00;
-    turtle_context.color = 0xFF;
-    while(ins_counter < ins_size){
-        int result = exec_turtle_cmd(bmp_buffer, instructions, &turtle_context);
-        printf("CMD result code: %d", result);
-        break;
-        //        ins_counter +=2;
+    turtle_context.color = 0xAABBFF;
+    turtle_context.pen_state = 0x00;
+    turtle_context.direction = 0x00;
+    while (ins_counter < ins_size) {
+        int result = exec_turtle_cmd(bmp_buffer, instructions+ins_counter, &turtle_context);
+        printf("CMD result code: %d\n", result);
+
+        printf("XPOS: %d | YPOS: %d | DIRECTION: %X | COLOR: 0x%X | PEN STATE: %d\n",
+               turtle_context.x_pos, turtle_context.y_pos, turtle_context.direction,
+               turtle_context.color, turtle_context.pen_state);
+
+        if (result == 7){
+            ins_counter += 4;
+        }
+        else{
+            ins_counter += 2;
+        }
+        if (ins_counter == 6)
+            break;
     }
 
-    printf("XPOS: %d\n", turtle_context.x_pos);
-    printf("YPOS: %d\n", turtle_context.y_pos);
     free(instructions);
     write_bytes_to_bmp(bmp_buffer, bmp_size);
     free(bmp_buffer);
