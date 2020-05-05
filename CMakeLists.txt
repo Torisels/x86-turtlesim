@@ -14,5 +14,5 @@ add_compile_options(
 
 
 set(CMAKE_ASM_NASM_FLAGS_DEBUG "-g -Fdwarf")
-add_executable(x86_turtlesim main.c program.asm func.c)
+add_executable(x86_turtlesim main.c program.asm)
 set_target_properties(x86_turtlesim PROPERTIES NASM_OBJ_FORMAT elf32)
