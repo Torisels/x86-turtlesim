@@ -3,13 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-#define INPUT_FILE_NAME "input.bin"
-#define OUTPUT_FILE_NAME "output2.bmp"
-#define CONFIG_FILE_NAME "config.txt"
-#define CONFIG_BUFFER_LEN 255
 #define DEBUG 1
 
+#define INPUT_FILE_NAME "input.bin"
+#define OUTPUT_FILE_NAME "output.bmp"
+#define CONFIG_FILE_NAME "config.txt"
+#define CONFIG_BUFFER_LEN 255
 
 #define BMP_HEADER_SIZE 54
 #define BMP_PIXEL_OFFSET 54
@@ -61,8 +60,7 @@ void init_bmp_header(BmpHeader *header) {
     header->important_colors = 0;
 }
 
-
-unsigned int read_bin_file(unsigned char *buffer) {
+unsigned read_bin_file(unsigned char **buffer) {
     FILE *file;
     file = fopen(INPUT_FILE_NAME, "rb");
     if (file == NULL) {
@@ -74,13 +72,13 @@ unsigned int read_bin_file(unsigned char *buffer) {
     int f_size = ftell(file);
     rewind(file);
 
-    buffer = (unsigned char *) malloc(f_size);
-    if (buffer == NULL) {
+    *buffer = malloc(f_size);
+    if (*buffer == NULL) {
         printf("Could not allocate memory for binary file. Exiting!");
         exit(-1);
     }
 
-    fread(buffer, f_size, 1, file);
+    fread(*buffer, f_size, 1, file);
     fclose(file);
     return f_size;
 }
@@ -131,6 +129,7 @@ unsigned char *generate_empty_bitmap(unsigned int width, unsigned int height, si
     header.size = *output_size;
     header.width = width;
     header.height = height;
+
     memcpy(bitmap, &header, BMP_HEADER_SIZE);
     for (int i = 54; i<*output_size;++i)
     {
@@ -145,8 +144,8 @@ extern int exec_turtle_cmd(unsigned char *dest_bitmap, unsigned char *command, T
 int main() {
 
     TurtleContextStruct turtle_context;
-    unsigned char *instructions = 0;
-    size_t ins_size = read_bin_file(instructions);
+    unsigned char *instructions;
+    size_t ins_size = read_bin_file(&instructions);
 
     unsigned int dimensions[2] = {0, 0};
     read_config(dimensions);
@@ -163,7 +162,19 @@ int main() {
     printf("Height [px]: %d\n", dimensions[1]);
     printf("BMP byte size: %d\n", bmp_size);
 #endif
+    int ins_counter = 0;
+    turtle_context.x_pos = 0xDD;
+    turtle_context.y_pos = 0xEE;
+    turtle_context.color = 0xFF;
+    while(ins_counter < ins_size){
+        int result = exec_turtle_cmd(bmp_buffer, instructions, &turtle_context);
+        printf("CMD result code: %d", result);
+        break;
+        //        ins_counter +=2;
+    }
 
+    printf("XPOS: %d\n", turtle_context.x_pos);
+    printf("YPOS: %d\n", turtle_context.y_pos);
     free(instructions);
     write_bytes_to_bmp(bmp_buffer, bmp_size);
     free(bmp_buffer);
