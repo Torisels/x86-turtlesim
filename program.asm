@@ -18,14 +18,11 @@ exec_turtle_cmd:
 
 cmd_set_pos:
         mov     edx, [ebp+16]   ;edx holds address to turtle context struct
-        mov     ebx, [eax]      ;ebx holds address to instruction
-        ror     bx, 8           ;'exchange' first two bytes
-        movzx   ecx, bx         ; move lowest 16bits from ebx to ecx
-        shr     ecx, 6          ; shift right ecx to move XPOS val at is't correct bit positions
-        mov     [edx], ecx
-        shr     ebx, 18
-        and     ebx, 0x3F
-        mov     [edx+4], ebx
+        mov     ebx, [eax]      ;ebx holds address to instruction which is --------|y5....0--|x1x0------|x9......x2
+        ror     bx, 8           ;'exchange' two bytes (on lsb) =>          --------|y5....0--|x9......x2|x1x0------)
+        shld    [edx], bx, 10   ; move first 10 bits of bx (x9...x0) to x_pos in turtle_struct
+        and     ebx, 0xFF0000   ; ignore 8 msb bits with mask 00000000|y5....0
+        shld    [edx+4], ebx, 14; move 00000000 | y5....0 to x_pos in turtle_struct
 exit1:
 	    pop	    ebp
 	    ret

@@ -163,8 +163,8 @@ int main() {
     printf("BMP byte size: %d\n", bmp_size);
 #endif
     int ins_counter = 0;
-    turtle_context.x_pos = 0xDD;
-    turtle_context.y_pos = 0xEE;
+    turtle_context.x_pos = 0x00;
+    turtle_context.y_pos = 0x00;
     turtle_context.color = 0xFF;
     while(ins_counter < ins_size){
         int result = exec_turtle_cmd(bmp_buffer, instructions, &turtle_context);
