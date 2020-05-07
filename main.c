@@ -167,14 +167,31 @@ int main() {
     int ins_counter = 0;
     turtle_context.x_pos = 0x00;
     turtle_context.y_pos = 0x00;
-    turtle_context.color = 0xAABBFF;
+    turtle_context.color = 0x00;
     turtle_context.pen_state = 0x00;
     turtle_context.direction = 0x00;
     while (ins_counter < ins_size) {
         int result = exec_turtle_cmd(bmp_buffer, instructions+ins_counter, &turtle_context);
-        printf("CMD result code: %d\n", result);
+        printf("CMD result code: ");
+        switch (result) {
+            case 12:
+                printf("SET PEN STATE\n");
+                break;
+            case 13:
+                printf("MOVE\n");
+                break;
+            case 11:
+                printf("SET DIRECTION\n");
+                break;
+            case 7:
+                printf("SET POSITION\n");
+                break;
+            default:
+                printf("NO CMD!\n");
+                break;
+        }
 
-        printf("XPOS: %d | YPOS: %d | DIRECTION: %X | COLOR: 0x%X | PEN STATE: %d\n",
+        printf("XPOS: %d | YPOS: %d | DIRECTION: %X | COLOR: 0x%X | PEN STATE: %d\n\n",
                turtle_context.x_pos, turtle_context.y_pos, turtle_context.direction,
                turtle_context.color, turtle_context.pen_state);
 
@@ -184,10 +201,7 @@ int main() {
         else{
             ins_counter += 2;
         }
-        if (ins_counter == 6)
-            break;
     }
-
     free(instructions);
     write_bytes_to_bmp(bmp_buffer, bmp_size);
     free(bmp_buffer);
