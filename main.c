@@ -4,9 +4,10 @@
 #include <string.h>
 
 #define DEBUG 1
+#pragma pack(1)
 
-#define INPUT_FILE_NAME "input.bin"
-#define OUTPUT_FILE_NAME "output.bmp"
+#define INPUT_FILE_NAME "input_1.bin"
+#define OUTPUT_FILE_NAME "output_1.bmp"
 #define CONFIG_FILE_NAME "config.txt"
 #define CONFIG_BUFFER_LEN 255
 
@@ -14,8 +15,8 @@
 #define BMP_PIXEL_OFFSET 54
 #define BMP_PLANES 1
 #define BMP_BPP 24
-#define BMP_HORIZONTAL_RES 2000
-#define BMP_VERTICAL_RES 2000
+#define BMP_HORIZONTAL_RES 500
+#define BMP_VERTICAL_RES 500
 #define BMP_DIB_HEADER_SIZE 40
 
 typedef struct {
