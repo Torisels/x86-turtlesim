@@ -23,6 +23,9 @@
 %define EXIT_CODE_SET_POS DWORD -1
 %define EXIT_CODE_ERROR DWORD 1
 
+%define OFF_S_BMP_BUFFER 8
+%define OFF_S_INS_BUFFER 12
+%define OFF_S_TURTLE_CONTEXT 16
 section .data
 h_movs  DB  1, 0, -1, 0
 v_movs  DB  0, 1, 0, -1
@@ -30,7 +33,7 @@ v_movs  DB  0, 1, 0, -1
 colors  DD  COLR_BLACK, COLR_RED, COLR_GREEN, COLR_BLUE, COLR_YELL, COLR_CYAN, COLR_PURPL, COLR_WHITE
 
 section	.text
-global  exec_turtle_cmd, _exec_turtle_cmd
+global  exec_turtle_cmd, _exec_turtle_cmd ;for Windows and Linux
 
 exec_turtle_cmd:
 _exec_turtle_cmd:
@@ -38,7 +41,7 @@ _exec_turtle_cmd:
         mov	    ebp, esp              ; prologue
 
         mov	    eax, DWORD [ebp+12]	  ; address of instruction buffer to eax
-        mov     bl, [eax+1]           ; load four bytes of the instruction to eax
+        mov     bl,  [eax+1]          ; load four bytes of the instruction to eax
         mov     ecx, [ebp+16]         ; move address to turtle_context struct to ecx
         and     ebx, MASK_CMD_TYPE    ; mask ebx in order to hold instruction information only
         ;switch case eqiv below
@@ -57,8 +60,8 @@ _exec_turtle_cmd:
 cmd_set_pos:
         mov     ebx, [eax]          ; ebx holds address to instruction which is   --------|y5....0--|x1x0------|x9......x2
         ror     bx, 14              ;'exchange' two bytes (on lsb part of ebx) => --------|y5....0--|------x9x8.....x2x1x0
-        and     bx, 0x3FF
-        mov     [ecx], bx           ; move first 10 bits of bx (x9...x0) to x_pos in turtle_struct
+        and     bx, 0x3FF           ; mask x9....x0 to remove trash bits
+        mov     [ecx], bx           ; move 10 bits of bx (x9...x0) to x_pos in turtle_struct
         shr     ebx, 18
         and     ebx, 0x3F            ; ignore 8 msb bits with mask 00000000|y5....0
         mov     [ecx+4], ebx         ; move 00000000 | y5....0 to x_pos in turtle_struct
@@ -66,14 +69,16 @@ cmd_set_pos:
         mov     eax, EXIT_CODE_SET_POS ; set exit code to special 7 which indicates that this instruction has 4 bytes
         pop     ebp
         ret
-
+;=========CASE CMD SET DIRECTION==================================
 cmd_set_dir:
         mov     bl, [eax+1]         ; move instruction to bl
         shr     bl, 2               ; shift right by 2 to have direction on correct bit positions
         and     bl, 0x03            ; mask bl in order to remove unnecessary bits
         mov     [ecx+13], bl        ; write position to turtle_context->position
-        jmp     exit_correct
+        jmp     exit_correct        ; exit with correct code
+;=========END CMD SET DIRECTION==================================
 
+;=========CASE CMD MOVE==========================================
 cmd_move:
         mov     bx, [eax]           ; move two bytes of instruction to bx
         ror     bx, 10              ; rotate bits by 10 to get bits on correct positions
@@ -224,9 +229,10 @@ exit_correct:
 	    pop	    ebp
 	    ret
 
-exit_from_move:
-        add     esp, 8
-        pop     ebp
-        ret
+exit_from_move: ; special type of exit with maintaining correct stack balance.
+        mov     eax, EXIT_CODE_CORRECT  ; move exit code to eax
+        add     esp, 8                  ; balance the stack
+        pop     ebp                     ; restore ebp
+        ret                             ; return
 
 
