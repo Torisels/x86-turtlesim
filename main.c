@@ -6,27 +6,41 @@
 #define DEBUG 1
 #pragma pack(1)
 
-#define INPUT_FILE_NAME "input_1.bin"
-#define OUTPUT_FILE_NAME "output_1.bmp"
+/*
+ * Important constants
+ */
+#define INPUT_FILE_NAME "input.bin"
+#define OUTPUT_FILE_NAME "output_4.bmp"
 #define CONFIG_FILE_NAME "config.txt"
-#define CONFIG_BUFFER_LEN 255
+#define CONFIG_BUFFER_LEN 255 //config.txt buffer len (not important)
 
+
+/*
+ * Constants for .bmp file such as pixel offset (we use basic windows's standard DIB header)
+ * It's size is 14 bytes (bmp basic header) + 40 bytes (DIB header) = 54 bytes.
+ */
 #define BMP_HEADER_SIZE 54
 #define BMP_PIXEL_OFFSET 54
 #define BMP_PLANES 1
 #define BMP_BPP 24
-#define BMP_HORIZONTAL_RES 500
-#define BMP_VERTICAL_RES 500
+#define BMP_HORIZONTAL_RES 500 //experimental constant, has to be greater than 0
+#define BMP_VERTICAL_RES 500   //experimental constant, has to be greater than 0
 #define BMP_DIB_HEADER_SIZE 40
 
+/*
+ * Struct for essential turtle information.
+ */
 typedef struct {
     uint32_t x_pos;
     uint32_t y_pos;
-    uint32_t color;
-    uint8_t pen_state;
-    uint8_t direction;
+    uint32_t color; // 0x00RRGGBB (red, green, blue)
+    uint8_t pen_state; // (0 - up, 1 - down)
+    uint8_t direction; // 0 - right, 1 - up, 2 - left, 3 - down
 } TurtleContextStruct;
 
+/*
+ * Struct for bmp header.
+ */
 typedef struct {
     unsigned char sig_0;
     unsigned char sig_1;
@@ -46,6 +60,9 @@ typedef struct {
     uint32_t important_colors;
 } BmpHeader;
 
+/*
+ * Initializes bmp_header with default values.
+ */
 void init_bmp_header(BmpHeader *header) {
     header->sig_0 = 'B';
     header->sig_1 = 'M';
@@ -62,7 +79,12 @@ void init_bmp_header(BmpHeader *header) {
     header->important_colors = 0;
 }
 
-unsigned read_bin_file(unsigned char **buffer) {
+/*
+ * Reads binary instruction file into memory. Returns pointer. Size has to be passed by reference.
+ * Array for binary instructions is dynamically allocated.
+ */
+unsigned char* read_bin_file(size_t *size) {
+    unsigned char* buffer;
     FILE *file;
     file = fopen(INPUT_FILE_NAME, "rb");
     if (file == NULL) {
@@ -71,18 +93,18 @@ unsigned read_bin_file(unsigned char **buffer) {
     }
 
     fseek(file, 0L, SEEK_END);
-    int f_size = ftell(file);
+    *size = ftell(file);
     rewind(file);
 
-    *buffer = malloc(f_size);
-    if (*buffer == NULL) {
+    buffer = malloc(*size);
+    if (buffer == NULL) {
         printf("Could not allocate memory for binary file. Exiting!");
         exit(-1);
     }
 
-    fread(*buffer, f_size, 1, file);
+    fread(buffer, *size, 1, file);
     fclose(file);
-    return f_size;
+    return buffer;
 }
 
 /*
@@ -108,6 +130,9 @@ void read_config(unsigned int *dimensions) {
     fclose(file);
 }
 
+/*
+ * Writes bmp buffer array into .bmp file.
+ */
 void write_bytes_to_bmp(unsigned char *buffer, size_t size) {
     FILE *file;
 
@@ -121,6 +146,9 @@ void write_bytes_to_bmp(unsigned char *buffer, size_t size) {
     fclose(file);
 }
 
+/*
+ * Generates empty bitmap for assembler usage. Initializes bitmap with white pixels.
+ */
 unsigned char *generate_empty_bitmap(unsigned int width, unsigned int height, size_t *output_size) {
     unsigned int row_size = (width * 3 + 3) & ~3;
     *output_size = row_size * height + BMP_HEADER_SIZE;
@@ -139,21 +167,32 @@ unsigned char *generate_empty_bitmap(unsigned int width, unsigned int height, si
     return bitmap;
 }
 
-
+/*
+ * Assembly function to execute turtle command.
+ */
 extern int exec_turtle_cmd(unsigned char *dest_bitmap, unsigned char *command, TurtleContextStruct *tc);
 
 int main() {
 
     TurtleContextStruct turtle_context;
-    unsigned char *instructions;
-    size_t ins_size = read_bin_file(&instructions);
+    size_t ins_size = 0;
+    unsigned char *instructions = read_bin_file(&ins_size);
+
+    if (ins_size == 0){
+        printf("Instruction buffer length cannot be 0. Exiting!");
+        exit(1);
+    }
 
     unsigned int dimensions[2] = {0, 0};
     read_config(dimensions);
 
+    if(dimensions[0] == 0 || dimensions[1] == 0){
+        printf("Image's dimensions cannot be 0. Exiting!");
+        exit(1);
+    }
+
     size_t bmp_size = 0;
     unsigned char *bmp_buffer = generate_empty_bitmap(dimensions[0], dimensions[1], &bmp_size);
-
 
 #ifdef DEBUG
     printf("======START OF INITIAL DEBUG INFO=====\n");
@@ -165,14 +204,17 @@ int main() {
     printf("BMP buffer size [byte]: %d\n", bmp_size);
     printf("======END OF INITIAL DEBUG INFO=====\n");
 #endif
-    int ins_counter = 0;
+
+    //initialize turtle_context with default values
     turtle_context.x_pos = 0x00;
     turtle_context.y_pos = 0x00;
     turtle_context.color = 0x00;
     turtle_context.pen_state = 0x00;
     turtle_context.direction = 0x00;
+
+    int ins_counter = 0;
     while (ins_counter < ins_size) {
-        int result = exec_turtle_cmd(bmp_buffer, instructions+ins_counter, &turtle_context);
+        int result = exec_turtle_cmd(bmp_buffer, instructions + ins_counter, &turtle_context);
         printf("CMD result code: ");
         switch (result) {
             case 12:
@@ -196,15 +238,15 @@ int main() {
                turtle_context.x_pos, turtle_context.y_pos, turtle_context.direction,
                turtle_context.color, turtle_context.pen_state);
 
-        if (result == 7){
+        if (result == 7) {
             ins_counter += 4;
-        }
-        else{
+        } else {
             ins_counter += 2;
         }
     }
-    free(instructions);
-    write_bytes_to_bmp(bmp_buffer, bmp_size);
-    free(bmp_buffer);
-    return 0;
+
+    free(instructions); //deallocate instructions' memory
+    write_bytes_to_bmp(bmp_buffer, bmp_size); //save bmp buffer into file
+    free(bmp_buffer); //deallocate bmp buffer
+    return 0;         //exit normally
 }
