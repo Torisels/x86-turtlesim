@@ -19,6 +19,10 @@
 %define IM_OFF_HEIGHT 22
 %define IM_OFF_PIXEL_ARRAY 54
 
+%define EXIT_CODE_CORRECT DWORD 0
+%define EXIT_CODE_SET_POS DWORD -1
+%define EXIT_CODE_ERROR DWORD 1
+
 section .data
 h_movs  DB  1, 0, -1, 0
 v_movs  DB  0, 1, 0, -1
@@ -45,8 +49,10 @@ _exec_turtle_cmd:
         je      cmd_set_dir
         cmp     bl, CMD_MOVE          ; case CMD move
         je      cmd_move
-        mov     eax, DWORD 2          ; if instruction was not found, exit with code 2
-        jmp     exit1
+        
+        mov     eax, EXIT_CODE_ERROR ; if instruction was not found, exit with error
+        pop     ebp
+        ret     
 
 cmd_set_pos:
         mov     ebx, [eax]          ; ebx holds address to instruction which is   --------|y5....0--|x1x0------|x9......x2
@@ -57,16 +63,16 @@ cmd_set_pos:
         and     ebx, 0x3F            ; ignore 8 msb bits with mask 00000000|y5....0
         mov     [ecx+4], ebx         ; move 00000000 | y5....0 to x_pos in turtle_struct
 
-        mov     eax, DWORD 0x07     ; set exit code to special 7 which indicates that this instruction has 4 bytes
-        jmp     exit1               ; jump to exit
+        mov     eax, EXIT_CODE_SET_POS ; set exit code to special 7 which indicates that this instruction has 4 bytes
+        pop     ebp
+        ret
 
 cmd_set_dir:
         mov     bl, [eax+1]         ; move instruction to bl
         shr     bl, 2               ; shift right by 2 to have direction on correct bit positions
         and     bl, 0x03            ; mask bl in order to remove unnecessary bits
         mov     [ecx+13], bl        ; write position to turtle_context->position
-        mov     eax, DWORD 11       ; exit with code 11
-        jmp     exit1
+        jmp     exit_correct
 
 cmd_move:
         mov     bx, [eax]           ; move two bytes of instruction to bx
@@ -106,7 +112,7 @@ then_x:
         mov     bl, [ecx+12]        ; move pen state flag to bl
         test    bl, bl              ; check if pen state is one
         pop     edi                 ; edi = bmp's width
-        jz      exit1               ; if zero, simply exit
+        jz      exit_correct               ; if zero, simply exit
         mov     ebx, [ecx + 4]      ; ebx = current Y pos of turtle
         imul    edi, ebx            ; edi = row_width * Y pos
         imul    esi, edx, 3         ; esi = current_pos * 3
@@ -142,7 +148,7 @@ draw_horizontal_line_loop:
 
         pop     ebp
         mov     eax, DWORD 13
-        jmp     exit1
+        jmp     exit_correct
 
 y_pos:
 
@@ -171,7 +177,7 @@ then_y:
 
         mov     bl, [ecx+12]        ; move pen state flag to bl
         test    bl, bl              ; check if pen state is one
-        jz      exit1               ; if not don't draw, exit
+        jz      exit_correct               ; if not don't draw, exit
         mov     ebx, esi            ; move current Y pos to ebx
         imul    ebx, edi            ; ebx = current Y * bytes_per_row
         mov     ecx, [ebp+8]
@@ -200,7 +206,7 @@ draw_vertical_line:
 
         pop     ebp
         mov     eax, DWORD 13
-        jmp     exit1
+        jmp     exit_correct
 
 
 cmd_set_pen_state:
@@ -212,9 +218,9 @@ cmd_set_pen_state:
         movzx   edx, bl         ; move color code to edx
         mov     ebx, [colors + edx*4] ; exchange color code to real color with using static array
         mov     [ecx+8], ebx    ; move correct RGB color to turtle context struct
-        mov     eax, DWORD 12   ; exit with code 12
 
-exit1:
+exit_correct:
+	    mov     eax, EXIT_CODE_CORRECT
 	    pop	    ebp
 	    ret
 

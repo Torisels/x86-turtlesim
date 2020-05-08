@@ -14,6 +14,9 @@
 #define CONFIG_FILE_NAME "config.txt"
 #define CONFIG_BUFFER_LEN 255 //config.txt buffer len (not important)
 
+#define EXIT_CODE_CORRECT 0
+#define EXIT_CODE_ERROR 1
+#define EXIT_CODE_SET_POS -1
 
 /*
  * Constants for .bmp file such as pixel offset (we use basic windows's standard DIB header)
@@ -83,8 +86,8 @@ void init_bmp_header(BmpHeader *header) {
  * Reads binary instruction file into memory. Returns pointer. Size has to be passed by reference.
  * Array for binary instructions is dynamically allocated.
  */
-unsigned char* read_bin_file(size_t *size) {
-    unsigned char* buffer;
+unsigned char *read_bin_file(size_t *size) {
+    unsigned char *buffer;
     FILE *file;
     file = fopen(INPUT_FILE_NAME, "rb");
     if (file == NULL) {
@@ -178,7 +181,7 @@ int main() {
     size_t ins_size = 0;
     unsigned char *instructions = read_bin_file(&ins_size);
 
-    if (ins_size == 0){
+    if (ins_size == 0) {
         printf("Instruction buffer length cannot be 0. Exiting!");
         exit(1);
     }
@@ -186,7 +189,7 @@ int main() {
     unsigned int dimensions[2] = {0, 0};
     read_config(dimensions);
 
-    if(dimensions[0] == 0 || dimensions[1] == 0){
+    if (dimensions[0] == 0 || dimensions[1] == 0) {
         printf("Image's dimensions cannot be 0. Exiting!");
         exit(1);
     }
@@ -215,33 +218,21 @@ int main() {
     int ins_counter = 0;
     while (ins_counter < ins_size) {
         int result = exec_turtle_cmd(bmp_buffer, instructions + ins_counter, &turtle_context);
-        printf("CMD result code: ");
-        switch (result) {
-            case 12:
-                printf("SET PEN STATE\n");
-                break;
-            case 13:
-                printf("MOVE\n");
-                break;
-            case 11:
-                printf("SET DIRECTION\n");
-                break;
-            case 7:
-                printf("SET POSITION\n");
-                break;
-            default:
-                printf("NO CMD!\n");
-                break;
-        }
 
+#ifdef DEBUG
         printf("XPOS: %d | YPOS: %d | DIRECTION: %X | COLOR: 0x%X | PEN STATE: %d\n\n",
                turtle_context.x_pos, turtle_context.y_pos, turtle_context.direction,
                turtle_context.color, turtle_context.pen_state);
-
-        if (result == 7) {
+#endif
+        if (result == EXIT_CODE_SET_POS) {
             ins_counter += 4;
-        } else {
+        } else if (result == EXIT_CODE_CORRECT) {
             ins_counter += 2;
+        } else if (result == EXIT_CODE_ERROR) {
+            printf("During processing of an instruction error occured!\n");
+        } else {
+            printf("Incorrect code was returned. Exiting!");
+            exit(result);
         }
     }
 
