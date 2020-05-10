@@ -21,7 +21,7 @@
 
 %define EXIT_CODE_CORRECT DWORD 0
 %define EXIT_CODE_SET_POS DWORD -1
-%define EXIT_CODE_ERROR DWORD 1
+%define EXIT_CODE_ERROR_NO_INS DWORD 1
 %define EXIT_CODE_ERROR_SET_POS DWORD 2
 
 %define BMP_BUFFER_S_OFF 8
@@ -55,7 +55,7 @@ _exec_turtle_cmd:
         cmp     bl, CMD_MOVE          ; case CMD move
         je      cmd_move
         
-        mov     eax, EXIT_CODE_ERROR ; if instruction was not found, exit with error
+        mov     eax, EXIT_CODE_ERROR_NO_INS ; if instruction was not found, exit with error
         pop     ebp
         ret     
 ;==========CASE CMD SET POSITION=================================
@@ -63,10 +63,11 @@ cmd_set_pos:
         mov     ebx, [eax]              ; ebx holds instruction which is     --------|y5....0--|x1x0------x9......x2
         ror     bx, 14                  ;'exchange' two bytes (inside bx) => --------|y5....0--|------x9x8.....x2x1x0
         and     bx, 0x3FF               ; mask x9....x0 to remove trash bits
-        mov     edx, [ebp + BMP_BUFFER_S_OFF]; move bmp buffer address to edx
-        mov     edi, [edx + IM_OFF_WIDTH]; move image's width to edi
-        cmp     bx, edi                  ; if desired X pos is greater or equal than image's width exit with error
-        jge     exit_with_error_cmd_set_pos ; if not proceed
+        mov     edx, [ebp + BMP_BUFFER_S_OFF]   ; move bmp buffer address to edx
+        mov     edi, [edx + IM_OFF_WIDTH]       ; move image's width to edi
+        movzx   esi, bx                   ; move bx to esi with zero extension in order to compare right
+        cmp     esi, edi                  ; if desired X pos is greater or equal than image's width exit with error
+        jge     exit_with_error_cmd_set_pos     ; if not proceed
         mov     [ecx], bx               ; move masked 10 bits of bx (x9...x0) to x_pos in turtle_struct
         shr     ebx, 18                 ; shift right remaining bits (y5...y0)
         and     ebx, 0x3F               ; mask to remove trash bits
@@ -129,7 +130,7 @@ then_x_0:
         xor     eax, eax            ; if yes, set future position to 0
 then_x:
         cmp     eax, edx            ; if future position == current position do nothing
-        je      exit_from_move      ; and exit with correct stack balance
+        je      exit_from_move_x      ; and exit with correct stack balance
 
         mov     ecx, [ebp+TURTLE_CNTX_S_OFF]       ; move pointer to turtle_context from stack to ecx
         mov     [ecx], eax          ; move future position X (eax) to turtle_context
@@ -256,8 +257,11 @@ exit_correct:   ; label for correct exit
 	    pop	    ebp
 	    ret
 
+exit_from_move_x:
+        add     esp, 4                 ; when exiting from x pos region, add 4 to stack
+
 exit_from_move: ; special type of exit with maintaining correct stack balance.
-        add     esp, 8                  ; balance the stack
+        add     esp, 4                  ; balance the stack
         mov     eax, EXIT_CODE_CORRECT  ; move exit code to eax
         pop     ebp                     ; restore ebp
         ret                             ; return

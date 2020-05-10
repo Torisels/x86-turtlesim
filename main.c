@@ -9,8 +9,8 @@
 /*
  * Important constants
  */
-#define INPUT_FILE_NAME "input_1.bin"
-#define OUTPUT_FILE_NAME "output_5.bmp"
+#define INPUT_FILE_NAME "input.bin"
+#define OUTPUT_FILE_NAME "output.bmp"
 #define CONFIG_FILE_NAME "config.txt"
 #define CONFIG_BUFFER_LEN 255 //config.txt buffer len (not important)
 
@@ -221,7 +221,7 @@ int main() {
         int result = exec_turtle_cmd(bmp_buffer, instructions + ins_counter, &turtle_context);
 
 #ifdef DEBUG
-        printf("XPOS: %d | YPOS: %d | DIRECTION: %X | COLOR: 0x%X | PEN STATE: %d\n\n",
+        printf("XPOS: %d | YPOS: %d | DIRECTION: %X | COLOR: 0x%X | PEN STATE: %d\n",
                turtle_context.x_pos, turtle_context.y_pos, turtle_context.direction,
                turtle_context.color, turtle_context.pen_state);
 #endif
@@ -239,7 +239,9 @@ int main() {
             printf("Incorrect code was returned. Exiting!");
             exit(result);
         }
+        printf("\n");
     }
+
 
     free(instructions); //deallocate instructions' memory
     write_bytes_to_bmp(bmp_buffer, bmp_size); //save bmp buffer into file
