@@ -9,14 +9,15 @@
 /*
  * Important constants
  */
-#define INPUT_FILE_NAME "input.bin"
-#define OUTPUT_FILE_NAME "output_4.bmp"
+#define INPUT_FILE_NAME "input_1.bin"
+#define OUTPUT_FILE_NAME "output_5.bmp"
 #define CONFIG_FILE_NAME "config.txt"
 #define CONFIG_BUFFER_LEN 255 //config.txt buffer len (not important)
 
 #define EXIT_CODE_CORRECT 0
 #define EXIT_CODE_ERROR 1
 #define EXIT_CODE_SET_POS -1
+#define EXIT_CODE_ERROR_SET_POS 2
 
 /*
  * Constants for .bmp file such as pixel offset (we use basic windows's standard DIB header)
@@ -229,7 +230,11 @@ int main() {
         } else if (result == EXIT_CODE_CORRECT) {
             ins_counter += 2;
         } else if (result == EXIT_CODE_ERROR) {
-            printf("During processing of an instruction error occured!\n");
+            printf("During processing of an instruction error occured! Exiting\n");
+            exit(result); //we don't know by how much increment so we exit
+        } else if (result == EXIT_CODE_ERROR_SET_POS) {
+            printf("Desired position out of image's bounds. Proceeding with skip!\n");
+            ins_counter += 4;
         } else {
             printf("Incorrect code was returned. Exiting!");
             exit(result);
