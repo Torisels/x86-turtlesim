@@ -15,7 +15,7 @@
 #define CONFIG_BUFFER_LEN 255 //config.txt buffer len (not important)
 
 #define EXIT_CODE_CORRECT 0
-#define EXIT_CODE_ERROR 1
+#define EXIT_CODE_ERROR_NO_INS 1
 #define EXIT_CODE_SET_POS -1
 #define EXIT_CODE_ERROR_SET_POS 2
 
@@ -229,7 +229,7 @@ int main() {
             ins_counter += 4;
         } else if (result == EXIT_CODE_CORRECT) {
             ins_counter += 2;
-        } else if (result == EXIT_CODE_ERROR) {
+        } else if (result == EXIT_CODE_ERROR_NO_INS) {
             printf("During processing of an instruction error occured! Exiting\n");
             exit(result); //we don't know by how much increment so we exit
         } else if (result == EXIT_CODE_ERROR_SET_POS) {
