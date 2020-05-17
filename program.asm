@@ -126,12 +126,12 @@ then_x_0:
         xor     rax, rax            ; if yes, set future position to 0
 then_x:
         cmp     rax, r8             ; if future position == current position do nothing
-        je      exit_from_move      ; and exit with corresponding exit code
+        je      exit_correct      ; and exit with corresponding exit code
 
         mov     [rdx], eax          ; move future position X (eax) to turtle_context
         mov     sil, [rdx+12]       ; move pen state flag to sil
         test    sil, sil            ; check if pen state is one
-        jz      exit_from_x_pos     ; if pen state is zero, just exit
+        jz      exit_correct        ; if pen state is zero, just exit
         mov     esi, [rdx + 4]      ; esi = current Y pos of turtle
         imul    rcx, rsi            ; rcx = row_width * current Y pos
         imul    r9, r8, 3           ; r9 = current X pos * 3
@@ -140,7 +140,7 @@ then_x:
         add     rdi, rcx            ; rdi = rdi + rcx = address + 54 + row_width * current Y pos
         add     rdi, r9             ; rdi holds absolute pixel index
 
-        mov     edx, [rdx+8]        ; rdx holds color from turtle context
+        mov     rdx, [rdx+8]        ; rdx holds color from turtle context
         mov     r10, rdx            ; copy color to r10
         imul    rsi, r11, 3         ; rsi = 3 * multiplier (-3 or 3)
 
@@ -155,87 +155,78 @@ draw_horizontal_line_loop:
         cmp     r8, rax             ; compare current position with future position
         jne     draw_horizontal_line_loop   ; if they are not equal repeat the loop
 
-        mov     rdx, r10            ; move color from r10 to rdx
+        mov     edx, r10d            ; move color from r10 to rdx
         mov     [rdi], dx           ; move Green and Blue to bmp buffer at correct position
-        shr     rdx, 16             ; shift right rdx by 16 bits to place red at it's correct position
+        shr     edx, 16             ; shift right rdx by 16 bits to place red at it's correct position
         mov     [rdi+2], dl         ; copy red into bmp buffer
 
         jmp     exit_correct        ; exit normally with correct exit code
 
 y_pos:
 
-;        mov     esi, [ecx+4]            ; move old Y pos from turtle context to esi
-;        movsx   edx, BYTE[v_movs + edi] ; move Y multiplier to edx
-;        pop     edi                     ; edi = row's width
-;        mov     eax, edx                ; eax = multiplier
-;        imul    eax, ebx                ; multiply eax = coeff * ebx (steps to move)
-;        add     eax, esi                ; eax = steps to move + old position Y
-;        push    edx                     ; push multiplier (if we are in y_pos we know that is is != 0)
-;        mov     edx, [ebp+8]            ; edx = address for bmp buffer
-;        mov     edx, [edx+22]           ; edx = bmp's height
-;        cmp     eax, edx                ; compare future position (eax) with image's height (edx)
-;        jl      then_y_0                ; if future position is lower than height, check if it is lower than 0
-;        mov     eax, edx                ; if not => future pos = height
-;        sub     eax, 1                  ; future pos --
-;        jmp     then_y                  ; after this operation, checking for negative future pos is unnecessary
-;then_y_0:
-;        test    eax, eax            ; check if future position is negative
-;        jns     then_y              ; if not, proceed to then_y
-;        xor     eax, eax            ; if yes, set future pos to 0
-;then_y:
-;        cmp     eax, esi            ; if future position == old position
-;        je      exit_from_move      ; exit normally
-;        pop     edx                 ; edx holds multiplier
-;        mov     [ecx+4], eax        ; store new position in memory
-;
-;        mov     bl, [ecx+12]        ; move pen state flag to bl
-;        test    bl, bl              ; check if pen state is one
-;        jz      exit_correct               ; if not don't draw, exit
-;        mov     ebx, esi            ; move current Y pos to ebx
-;        imul    ebx, edi            ; ebx = current Y * bytes_per_row
-;        mov     ecx, [ebp+BMP_BUFFER_S_OFF] ; ecx = beginning of bmp buffer
-;        add     ecx, IM_OFF_PIXEL_ARRAY     ; ecx = beginning + pixel offset
-;        add     ecx, ebx            ; ecx holds absolute pixel offset (correct row)
-;        mov     ebx, [ebp+TURTLE_CNTX_S_OFF]; ebx holds pointer to turtle context
-;        mov     ebx, [ebx]          ; ebx = current X position
-;        imul    ebx, 3              ; ebx = current X position * 3
-;        add     ecx, ebx            ; ecx holds absolute pixel offset (memory offset + row + width)
-;        mov     ebx, [ebp+TURTLE_CNTX_S_OFF] ; ebx holds pointer to turtle context
-;        mov     ebx, [ebx+8]        ; ebx = turtle's color
-;        push    ebp                 ; preserve ebp on stack
-;        mov     ebp, ebx            ; ebp also holds color
-;        imul    edi, edx            ; edi = bytes per row * multiplier (-1 or 1), because we traverse vertically
-;
-;draw_vertical_line:
-;        mov     ebx, ebp            ; move color from ebp to ebx
-;        mov     [ecx], bx           ; move Green and Blue into memory
-;        shr     ebx, 16             ; shift right color register by 16 (00...0RRRRRRRR)
-;        mov     [ecx+2], bl         ; move Red to memory
-;
-;        add     esi, edx            ; current position += multiplier (-1 or 1)
-;        add     ecx, edi            ; memory index += bytes per row * multiplier (-1 or 1)
-;        cmp     esi, eax            ; check if current position == future position
-;        jne     draw_vertical_line  ; if not, repeat the loop
-;
-;        mov     ebx, ebp            ; color last pixel in the same way as above
-;        mov     [ecx], bx
-;        shr     ebx, 16
-;        mov     [ecx+2], bl
-;
-;        pop     ebp                 ; restore ebp
-;        jmp     exit_correct        ; exit correctly
+        mov     r8d, [rdx+4]            ; move old Y pos from turtle context to r8d
+        movsx   rax, BYTE[v_movs + r9]  ; move Y multiplier to rax
+        mov     r11, rax                ; r11 = rax = multiplier
+        imul    rax, rsi                ; multiply rax = multiplier * rsi (steps to move)
+        add     rax, r8                 ; rax = steps to move + old position Y
+        mov     r10d, [rdi+22]          ; r10 = bmp's height
+        cmp     rax, r10                ; compare future position (rax) with image's height (r10)
+        jl      then_y_0                ; if future position is lower than height, check if it is lower than 0
+        mov     rax, r10                ; if not => future pos = height
+        sub     rax, 1                  ; future pos --
+        jmp     then_y                  ; after this operation, checking for negative future pos is unnecessary
+then_y_0:
+        test    rax, rax            ; check if future position is negative
+        jns     then_y              ; if not, proceed to then_y
+        xor     rax, rax            ; if yes, set future pos to 0
+then_y:
+        cmp     rax, r8             ; if future position == old position
+        je      exit_correct        ; exit normally
+        mov     [rdx+4], eax        ; store new position in memory
+
+        mov     sil, [rdx+12]       ; move pen state flag to sil
+        test    sil, sil            ; check if pen state is one
+        jz      exit_correct        ; if pen state is zero, just exit
+        mov     r9, rcx             ; r9 = rcx = bytes_per_row
+        imul    rcx, r8             ; rcx = bytes_per_row * current Y position
+        add     rdi, IM_OFF_PIXEL_ARRAY     ; rdi = beginning + pixel offset
+        add     rdi, rcx            ; rdi holds absolute pixel offset (correct row)
+        mov     esi, [rdx]          ; rsi = current X position
+        imul    rsi, 3              ; rsi = current X position * 3
+        add     rdi, rsi            ; rdi holds absolute pixel offset (memory offset + row + width)
+        mov     edx, [rdx+8]        ; edx = turtle's color
+        mov     r10, rdx           ; r10 also holds color
+        imul    r9, r11             ; r9 = bytes per row * multiplier (-1 or 1), because we traverse vertically
+
+draw_vertical_line:
+        mov     rdx, r10            ; move color from ebp to rdx
+        mov     [rdi], dx           ; move Green and Blue into memory
+        shr     rdx, 16             ; shift right color register by 16 (00...0RRRRRRRR)
+        mov     [rdi+2], dl         ; move Red to memory
+
+        add     r8, r11             ; current position += multiplier (-1 or 1)
+        add     rdi, r9             ; memory index += bytes per row * multiplier (-1 or 1)
+        cmp     r8, rax             ; check if current position == future position
+        jne     draw_vertical_line  ; if not, repeat the loop
+
+        mov     rdx, r10            ; move color from ebp to rdx
+        mov     [rdi], dx           ; move Green and Blue into memory
+        shr     rdx, 16             ; shift right color register by 16 (00...0RRRRRRRR)
+        mov     [rdi+2], dl         ; move Red to memory
+
+        jmp     exit_correct        ; exit correctly
 ;========END CMD MOVE===========================
 
 
 ;========CASE CMD SET PEN STATE=================
 cmd_set_pen_state:
-        mov     rax, [rsi]
+        mov     ax, [rsi]       ; move instruction buffer to rax
         shr     ah, 3           ; shift right for correct bit position of pen state
         and     ah, 0x01        ; mask pen state
         mov     [rdx+12], ah    ; move pen state information to turtle context struct
         shr     al, 5           ; shift bl by 5 to have correct color info at right bits
-        and     rax, 0x03       ; and rax with correct bit mask
-        mov     rax, [colors + rax*4] ; exchange color code to real color with using static array
+        and     rax, 0x07       ; and rax with correct bit mask
+        mov     eax, [colors + rax*4] ; exchange color code to real color with using static array
         mov     [rdx+8], eax    ; move correct RGB color to turtle context struct
 ;========END CMD SET PEN STATE==================
 
