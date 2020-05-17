@@ -9,7 +9,7 @@
 /*
  * Important constants
  */
-#define INPUT_FILE_NAME "input_1.bin"
+#define INPUT_FILE_NAME "input.bin"
 #define OUTPUT_FILE_NAME "output_1.bmp"
 #define CONFIG_FILE_NAME "config.txt"
 #define CONFIG_BUFFER_LEN 255 //config.txt buffer len (not important)
@@ -240,6 +240,10 @@ int main() {
             exit(result);
         }
         printf("\n");
+        if (ins_counter ==8)
+        {
+            break;
+        }
     }
 
 
