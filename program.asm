@@ -2,6 +2,7 @@
 %define CMD_SET_DIR 0x02
 %define CMD_MOVE    0x01
 %define CMD_SET_PEN_STATE 0x00
+
 %define MASK_CMD_TYPE 0x03
 
 %define COLR_BLACK  0x000000
@@ -13,7 +14,7 @@
 %define COLR_PURPL  0xFF00FF
 %define COLR_WHITE  0xFFFFFF
 
-%define CLOSEST_FOUR_MUL_MASK 0xFFFFFFFC
+%define CLOSEST_FOUR_MUL_MASK 0xFFFFFFFFFFFFFFFC
 
 %define IM_OFF_WIDTH 18
 %define IM_OFF_HEIGHT 22
@@ -96,83 +97,73 @@ cmd_set_dir:
 
 ;=========CASE CMD MOVE==========================================
 cmd_move:
-;        mov     bx, [eax]           ; move two bytes of instruction to bx
-;        ror     bx, 10              ; rotate bits by 10 to get bits on correct positions
-;        and     ebx, 0x3FF          ; mask with 0b00001111 11111111 to remove trash bits
-;
-;        mov     eax, [ebp + BMP_BUFFER_S_OFF]   ; addr of image to eax
-;        mov     esi, [eax + IM_OFF_WIDTH]       ; move width to esi
-;
-;        imul    edi, esi, 3         ; edi = WIDTH * 3
-;        add     edi, 3              ; edi = WIDTH * 3 + 3
-;        and     edi, CLOSEST_FOUR_MUL_MASK; edi = (WIDTH * 3 + 3) & ~3
-;        push    edi                 ; preserve edi on stack, edi holds bmp row's width
-;
-;        mov     edx, [ecx]          ; move current X POS from turtle context to ecx
-;        movzx   edi, BYTE [ecx+13]  ; move direction code from turtle context to edi
-;        movsx   eax, BYTE [h_movs + edi] ;move move multiplier to eax
-;        test    eax, eax            ; if multiplier is 0 we simply ignore horizontal movement
-;        jz      y_pos               ; jmp for vertical movement
-;        push    eax                 ; save multiplier to stack
-;        imul    eax, ebx            ; eax = multiplier * steps_to_move
-;        add     eax, edx            ; eax = multiplier * steps_to_move + current_position
-;        cmp     eax, esi            ; compare future position X with image's width
-;        jl      then_x_0            ; if future position < image's width, then ok
-;        mov     eax, esi            ; if not, set future position to image's border
-;        sub     eax, 1              ; and subtract 1, because position is 0 indexed
-;        jmp     then_x              ; after this operation, checking for negative future pos is unnecessary
-;then_x_0:
-;        test    eax, eax            ; check if future position (eax) is lower than 0
-;        jns     then_x              ; if not go to saving and drawing
-;        xor     eax, eax            ; if yes, set future position to 0
-;then_x:
-;        cmp     eax, edx            ; if future position == current position do nothing
-;        je      exit_from_move_x      ; and exit with correct stack balance
-;
-;        mov     ecx, [ebp+TURTLE_CNTX_S_OFF]       ; move pointer to turtle_context from stack to ecx
-;        mov     [ecx], eax          ; move future position X (eax) to turtle_context
-;        pop     eax                 ; eax = multiplier from stack
-;        mov     bl, [ecx+12]        ; move pen state flag to bl
-;        test    bl, bl              ; check if pen state is one
-;        pop     edi                 ; edi = bmp's width, pop here to maintain stack balance
-;        jz      exit_correct        ; if pen state is zero, simply exit
-;        mov     ebx, [ecx + 4]      ; ebx = current Y pos of turtle
-;        imul    edi, ebx            ; edi = row_width * Y pos
-;        imul    esi, edx, 3         ; esi = current_pos * 3
-;        add     edi, esi            ; edi = edi + esi = row_width * Y pos + X pos * 3
-;        mov     ecx, [ebp+BMP_BUFFER_S_OFF]         ; ecx = pointer to bmp
-;        add     ecx, IM_OFF_PIXEL_ARRAY             ; ecx holds pointer to pixel array (pointer to buffer + offset)
-;        add     edi, ecx            ; edi holds absolute pixel index ( pointer to array + pixel index)
-;
-;        mov     ecx, [ebp+TURTLE_CNTX_S_OFF]       ; ecx = turtle context pointer
-;        mov     ebx, [ecx+8]        ; ebx holds color from turtle context
-;        mov     ecx, [ecx]          ; ecx hold x pos from turtle context
-;        push    ebp                 ; preserve ebp on stack
-;        mov     ebp, ebx            ; ebp = ebx = color
-;        mov     esi, eax            ; esi = multiplier
-;        imul    eax, 3              ; eax = 3 * multiplier
-;
-;draw_horizontal_line_loop:
-;        mov     ebx, ebp            ; move color from ebp to ebx
-;        mov     [edi], bx           ; move Green and Blue to bmp buffer at correct position
-;        shr     ebx, 16             ; shift right ebx by 16 bits to place red at it's correct position
-;        mov     [edi+2], bl         ; copy red into bmp buffer
-;
-;        add     edx, esi            ; add multiplier (-1 or 1) to current position
-;        add     edi, eax            ; add multiplier (-3 or 3) to memory index
-;        cmp     edx, ecx            ; compare current position with future position
-;        jne     draw_horizontal_line_loop   ; if they are not equal repeat the loop
-;
-;        mov     ebx, ebp            ; if they are, color the last pixel
-;        mov     [edi], bx           ; do the same as in four lines below draw_horizontal_line_loop
-;        shr     ebx, 16
-;        mov     [edi+2], bl
-;
-;        pop     ebp                 ; restore ebp
-;        jmp     exit_correct        ; exit normally
-;
-;y_pos:
-;
+        mov     si, [rsi]           ; move two bytes of instruction to si
+        ror     si, 10              ; rotate bits by 10 to get bits on correct positions
+        and     rsi, 0x3FF          ; mask with 0b00001111 11111111 to remove trash bits
+
+        mov     ecx, [rdi + IM_OFF_WIDTH]       ; move width to ecx
+        mov     r10, rcx            ; copy width to r10
+        imul    rcx, 3              ; rcx = WIDTH * 3
+        add     rcx, 3              ; rcx = WIDTH * 3 + 3
+        and     rcx, CLOSEST_FOUR_MUL_MASK; rcx = (WIDTH * 3 + 3) & ~3
+
+        mov     r8d, [rdx]          ; move current X POS from turtle context to r8d (4 bytes)
+        movzx   r9,  BYTE [rdx+13]   ; move direction code from turtle context to r9
+        movsx   rax, BYTE [h_movs + r9] ;move move multiplier to rax
+        test    rax, rax            ; if multiplier is 0 we simply ignore horizontal movement
+        jz      y_pos               ; jmp for vertical movement
+        mov     r11, rax            ; copy multiplier to r11
+        imul    rax, rsi            ; rax = multiplier * steps_to_move
+        add     rax, r8             ; rax = multiplier * steps_to_move + current_position
+        cmp     rax, r10            ; compare future position X with image's width
+        jl      then_x_0            ; if future position < image's width, then ok and test if it is negative
+        mov     rax, r10            ; if not, set future position to image's border
+        sub     rax, 1              ; and subtract 1, because position is 0 indexed
+        jmp     then_x              ; after this operation, checking for negative future pos is unnecessary
+then_x_0:
+        test    rax, rax            ; check if future position (rax) is lower than 0
+        jns     then_x              ; if not go to saving and drawing
+        xor     rax, rax            ; if yes, set future position to 0
+then_x:
+        cmp     rax, r8             ; if future position == current position do nothing
+        je      exit_from_move      ; and exit with corresponding exit code
+
+        mov     [rdx], eax          ; move future position X (eax) to turtle_context
+        mov     sil, [rdx+12]       ; move pen state flag to sil
+        test    sil, sil            ; check if pen state is one
+        jz      exit_from_x_pos     ; if pen state is zero, just exit
+        mov     esi, [rdx + 4]      ; esi = current Y pos of turtle
+        imul    rcx, rsi            ; rcx = row_width * current Y pos
+        imul    r9, r8, 3           ; r9 = current X pos * 3
+
+        add     rdi, IM_OFF_PIXEL_ARRAY ; rdi holds pointer to pixel array (pointer to buffer + offset==54)
+        add     rdi, rcx            ; rdi = rdi + rcx = address + 54 + row_width * current Y pos
+        add     rdi, r9             ; rdi holds absolute pixel index
+
+        mov     edx, [rdx+8]        ; rdx holds color from turtle context
+        mov     r10, rdx            ; copy color to r10
+        imul    rsi, r11, 3         ; rsi = 3 * multiplier (-3 or 3)
+
+draw_horizontal_line_loop:
+        mov     rdx, r10            ; move color from r10 to rdx
+        mov     [rdi], dx           ; move Green and Blue to bmp buffer at correct position
+        shr     rdx, 16             ; shift right rdx by 16 bits to place red at it's correct position
+        mov     [rdi+2], dl         ; copy red into bmp buffer
+
+        add     r8, r11             ; add multiplier (-1 or 1) to current position
+        add     rdi, rsi            ; add multiplier (-3 or 3) to memory index
+        cmp     r8, rax             ; compare current position with future position
+        jne     draw_horizontal_line_loop   ; if they are not equal repeat the loop
+
+        mov     rdx, r10            ; move color from r10 to rdx
+        mov     [rdi], dx           ; move Green and Blue to bmp buffer at correct position
+        shr     rdx, 16             ; shift right rdx by 16 bits to place red at it's correct position
+        mov     [rdi+2], dl         ; copy red into bmp buffer
+
+        jmp     exit_correct        ; exit normally with correct exit code
+
+y_pos:
+
 ;        mov     esi, [ecx+4]            ; move old Y pos from turtle context to esi
 ;        movsx   edx, BYTE[v_movs + edi] ; move Y multiplier to edx
 ;        pop     edi                     ; edi = row's width
@@ -253,11 +244,7 @@ exit_correct:   ; label for correct exit
 	    mov     rax, EXIT_CODE_CORRECT  ; exit with correct code in eax
 	    ret
 
-exit_from_move_x:
-        add     esp, 4                 ; when exiting from x pos region, add 4 to stack
-
 exit_from_move: ; special type of exit with maintaining correct stack balance.
-        add     esp, 4                  ; balance the stack
         mov     rax, EXIT_CODE_CORRECT  ; move exit code to eax
         ret                             ; return
 
