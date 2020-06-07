@@ -90,9 +90,9 @@ exit_with_error_cmd_set_pos:
 cmd_set_dir:
         mov     si, [rsi]
         shr     si, 10               ; shift right by 10 to have direction on correct bit positions
-        and     si, 0x03            ; mask di in order to remove unnecessary bits
+        and     si, 0x03             ; mask di in order to remove unnecessary bits
         mov     [rdx+13], sil        ; write position to position in turtle_context struct
-        jmp     exit_correct        ; exit with correct code
+        jmp     exit_correct         ; exit with correct code
 ;=========END CMD SET DIRECTION==================================
 
 ;=========CASE CMD MOVE==========================================
@@ -107,7 +107,7 @@ cmd_move:
         add     rcx, 3              ; rcx = WIDTH * 3 + 3
         and     rcx, CLOSEST_FOUR_MUL_MASK; rcx = (WIDTH * 3 + 3) & ~3
 
-        mov     r8d, [rdx]          ; move current X POS from turtle context to r8d (4 bytes)
+        mov     r8d, [rdx]           ; move current X POS from turtle context to r8d (4 bytes)
         movzx   r9,  BYTE [rdx+13]   ; move direction code from turtle context to r9
         movsx   rax, BYTE [h_movs + r9] ;move move multiplier to rax
         test    rax, rax            ; if multiplier is 0 we simply ignore horizontal movement
@@ -126,7 +126,7 @@ then_x_0:
         xor     rax, rax            ; if yes, set future position to 0
 then_x:
         cmp     rax, r8             ; if future position == current position do nothing
-        je      exit_correct      ; and exit with corresponding exit code
+        je      exit_correct        ; and exit with corresponding exit code
 
         mov     [rdx], eax          ; move future position X (eax) to turtle_context
         mov     sil, [rdx+12]       ; move pen state flag to sil
@@ -155,7 +155,7 @@ draw_horizontal_line_loop:
         cmp     r8, rax             ; compare current position with future position
         jne     draw_horizontal_line_loop   ; if they are not equal repeat the loop
 
-        mov     edx, r10d            ; move color from r10 to rdx
+        mov     edx, r10d           ; move color from r10 to rdx
         mov     [rdi], dx           ; move Green and Blue to bmp buffer at correct position
         shr     edx, 16             ; shift right rdx by 16 bits to place red at it's correct position
         mov     [rdi+2], dl         ; copy red into bmp buffer
@@ -163,7 +163,6 @@ draw_horizontal_line_loop:
         jmp     exit_correct        ; exit normally with correct exit code
 
 y_pos:
-
         mov     r8d, [rdx+4]            ; move old Y pos from turtle context to r8d
         movsx   rax, BYTE[v_movs + r9]  ; move Y multiplier to rax
         mov     r11, rax                ; r11 = rax = multiplier
@@ -195,7 +194,7 @@ then_y:
         imul    rsi, 3              ; rsi = current X position * 3
         add     rdi, rsi            ; rdi holds absolute pixel offset (memory offset + row + width)
         mov     edx, [rdx+8]        ; edx = turtle's color
-        mov     r10, rdx           ; r10 also holds color
+        mov     r10, rdx            ; r10 also holds color
         imul    r9, r11             ; r9 = bytes per row * multiplier (-1 or 1), because we traverse vertically
 
 draw_vertical_line:
@@ -220,7 +219,7 @@ draw_vertical_line:
 
 ;========CASE CMD SET PEN STATE=================
 cmd_set_pen_state:
-        mov     ax, [rsi]       ; move instruction buffer to rax
+        mov     ax, [rsi]       ; move instruction buffer to ax
         shr     ah, 3           ; shift right for correct bit position of pen state
         and     ah, 0x01        ; mask pen state
         mov     [rdx+12], ah    ; move pen state information to turtle context struct
@@ -234,9 +233,4 @@ cmd_set_pen_state:
 exit_correct:   ; label for correct exit
 	    mov     rax, EXIT_CODE_CORRECT  ; exit with correct code in eax
 	    ret
-
-exit_from_move: ; special type of exit with maintaining correct stack balance.
-        mov     rax, EXIT_CODE_CORRECT  ; move exit code to eax
-        ret                             ; return
-
 

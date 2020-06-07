@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DEBUG 1
-//#pragma pack(1)
+//#define DEBUG 1
+//#pragma pack(1) //for windows
 
 /*
  * Important constants
@@ -224,6 +224,7 @@ int main() {
         printf("XPOS: %d | YPOS: %d | DIRECTION: %X | COLOR: 0x%X | PEN STATE: %d\n",
                turtle_context.x_pos, turtle_context.y_pos, turtle_context.direction,
                turtle_context.color, turtle_context.pen_state);
+        printf("\n");
 #endif
         if (result == EXIT_CODE_SET_POS) {
             ins_counter += 4;
@@ -239,10 +240,7 @@ int main() {
             printf("Incorrect code was returned. Exiting!");
             exit(result);
         }
-        printf("\n");
     }
-
-
     free(instructions); //deallocate instructions' memory
     write_bytes_to_bmp(bmp_buffer, bmp_size); //save bmp buffer into file
     free(bmp_buffer); //deallocate bmp buffer
